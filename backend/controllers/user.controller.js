@@ -3,49 +3,94 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
+import { TempUser } from "../models/tempUser.model.js";
+import { sendOTP } from "../utils/sendOTP.js";
 
 export const register = async (req, res) => {
     try {
         const { fullname, email, phoneNumber, password, role } = req.body;
-         
+
         if (!fullname || !email || !phoneNumber || !password || !role) {
-            return res.status(400).json({
-                message: "Something is missing",
-                success: false
-            });
-        };
+            return res.status(400).json({ message: "All fields are required", success: false });
+        }
+
+        const userExists = await User.findOne({ email });
+        if (userExists) {
+            return res.status(400).json({ message: "User already exists", success: false });
+        }
+
         const file = req.file;
         const fileUri = getDataUri(file);
         const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
 
-        const user = await User.findOne({ email });
-        if (user) {
-            return res.status(400).json({
-                message: 'User already exist with this email.',
-                success: false,
-            })
-        }
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        await User.create({
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        console.log(otp);
+        
+        // Save to TempUser
+        await TempUser.findOneAndDelete({ email }); // remove previous attempts if any
+
+        await TempUser.create({
             fullname,
             email,
             phoneNumber,
             password: hashedPassword,
             role,
-            profile:{
-                profilePhoto:cloudResponse.secure_url,
+            profilePhoto: cloudResponse.secure_url,
+            otp,
+            otpExpire: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
+        });
+
+        // Send OTP to user's email
+        await sendOTP(email, otp);
+
+        return res.status(200).json({ message: "OTP sent to email", success: true });
+
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: "Internal Server Error", success: false });
+    }
+};
+
+
+export const verifyOtp = async (req, res) => {
+    const { email, otp } = req.body;
+    console.log(email, otp);
+    
+
+    try {
+        const tempUser = await TempUser.findOne({ email:email });
+
+        if (!tempUser) {
+            return res.status(400).json({ message: "No registration found", success: false });
+        }
+
+        if (tempUser.otp !== otp || tempUser.otpExpire < new Date()) {
+            return res.status(400).json({ message: "Invalid or expired OTP", success: false });
+        }
+
+        await User.create({
+            fullname: tempUser.fullname,
+            email: tempUser.email,
+            phoneNumber: tempUser.phoneNumber,
+            password: tempUser.password,
+            role: tempUser.role,
+            profile: {
+                profilePhoto: tempUser.profilePhoto,
             }
         });
 
-        return res.status(201).json({
-            message: "Account created successfully.",
-            success: true
-        });
-    } catch (error) {
-        console.log(error);
+        await TempUser.deleteOne({ email });
+
+        return res.status(201).json({ message: "Account verified and created", success: true });
+
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ message: "Server Error", success: false });
     }
-}
+};
+
 export const login = async (req, res) => {
     try {
         const { email, password, role } = req.body;

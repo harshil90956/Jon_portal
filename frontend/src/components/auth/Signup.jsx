@@ -34,7 +34,7 @@ const Signup = () => {
     }
     const submitHandler = async (e) => {
         e.preventDefault();
-        const formData = new FormData();    //formdata object
+        const formData = new FormData();
         formData.append("fullname", input.fullname);
         formData.append("email", input.email);
         formData.append("phoneNumber", input.phoneNumber);
@@ -43,25 +43,32 @@ const Signup = () => {
         if (input.file) {
             formData.append("file", input.file);
         }
-
+    
         try {
             dispatch(setLoading(true));
+            
+            // Send form data to temporary registration route
             const res = await axios.post(`${USER_API_END_POINT}/register`, formData, {
                 headers: { 'Content-Type': "multipart/form-data" },
                 withCredentials: true,
             });
+    
             if (res.data.success) {
-                navigate("/login");
+                // Store email to use during OTP verification
+                localStorage.setItem("pendingEmail", input.email);
+    
+                // Navigate to OTP page
+                navigate("/otpVerify");
                 toast.success(res.data.message);
             }
         } catch (error) {
             console.log(error);
-            toast.error(error.response.data.message);
-        } finally{
+            toast.error(error?.response?.data?.message || "Something went wrong!");
+        } finally {
             dispatch(setLoading(false));
         }
-    }
-
+    };
+    
     useEffect(()=>{
         if(user){
             navigate("/");
