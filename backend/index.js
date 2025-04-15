@@ -26,6 +26,10 @@ app.use(cors({
 const PORT = process.env.PORT || 3000;
 
 // API routes
+// api's
+app.use("/active",(req,res)=>{
+    res.send("Active server")
+})
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/company", companyRoute);
 app.use("/api/v1/job", jobRoute);
