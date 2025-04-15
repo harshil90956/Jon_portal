@@ -20,7 +20,7 @@ app.use(cookieParser());
 // ✅ Allow all domains using '*'
 app.use(cors({
   origin: "*", // Allow requests from any origin
-  credentials: true
+
 }));
 
 const PORT = process.env.PORT || 3000;
