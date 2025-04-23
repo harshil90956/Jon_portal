@@ -19,8 +19,8 @@ app.use(cookieParser());
 
 // ✅ Allow all domains using '*'
 app.use(cors({
-  origin: "*", // Allow requests from any origin
-
+  origin: "https://your-frontend-domain.com", // ✅ specific domain only
+  credentials: true,                           // ✅ allow cookies/token headers
 }));
 
 const PORT = process.env.PORT || 3000;
