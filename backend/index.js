@@ -19,8 +19,8 @@ app.use(cookieParser());
 
 // ✅ Allow all domains using '*'
 app.use(cors({
-  origin: "https://your-frontend-domain.com", // ✅ specific domain only
-  credentials: true,                           // ✅ allow cookies/token headers
+  origin: "https://jon-portal-2.onrender.com", // ✅ your actual frontend
+  credentials: true,
 }));
 
 const PORT = process.env.PORT || 3000;
